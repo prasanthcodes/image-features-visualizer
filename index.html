@@ -40,6 +40,7 @@ body {
   position: absolute;
   top: 0;
   right: 25px;
+  color: #ccc;
   font-size: 36px;
   margin-left: 50px;
 }
@@ -65,16 +66,7 @@ color: #F386FF;
 <option value="0">back cam</option>
 <option value="1">front cam</option>
 </select>
-<hr>
-<span class="sidenavtext">Select Video File:</span><br>
-<input type="file" id="file_input">
-<br>
-<input type="button" value="upload" id="file_button" onclick="getFileInput()">
-<hr>
-<span class="sidenavtext">Options:</span><br>
-<input type="checkbox" id="check_1" name="check_1" value="1" checked onclick="check_1()"><label for="check_1"> display original </label>
-<br>
-<input type="checkbox" id="check_2" name="check_2" value="1" checked="" onclick="check_2()"><label for="check_2"> sub inputs </label>
+
 
 </div>
 
@@ -98,10 +90,13 @@ color: #F386FF;
 <option value="68">MBP LocalPattern</option>
 <option value="69">CSLBP LocalPattern</option>
 <option value="70">CBP LocalPattern</option>
-<option value="60">LTP feature</option>
-<option value="60">LTP feature</option>
-<option value="60">LTP feature</option>
-<option value="60">LTP feature</option>
+<option value="71">CCR LocalPattern</option>
+<option value="72">ILTP LocalPattern</option>
+<option value="73">CLBP C & M LocalPattern</option>
+<option value="74">LQP LocalPattern</option>
+<option value="75">BGC LocalPattern</option>
+<option value="76">GLBP LocalPattern</option>
+<option value="77">HOG Descriptor</option>
 
 </select>
 
@@ -109,6 +104,13 @@ color: #F386FF;
 <input type="button" id="StopCam" value="StopCam" onclick="StopCam()"> 
 <input type="button" id="CaptureImg" value="Capture" onclick="downloadCanvasImage()"> 
 <input type="button" id="RefreshImg" value="Refresh" onclick="RefreshCanvasImage()"> 
+
+<input type="file" id="file_input">
+<input type="button" value="upload" id="file_button" onclick="getFileInput()">
+
+<input type="checkbox" id="check_1" name="check_1" value="1" checked onclick="check_1()"><label for="check_1"> display original </label>
+<input type="checkbox" id="check_2" name="check_2" value="1" checked="" onclick="check_2()"><label for="check_2"> sub inputs </label>
+
 
 <br>
 <div id='subinputs'></div>
@@ -129,6 +131,8 @@ var width = 1;
 var height = 1;
 var CurrentInputType=0;//1-video,2-image
 var InputFieldsAll=new Array(10);
+var jsloadedflag = false;
+var is_cv_loaded=false;
 
 var framecount=0;
 var effect_name='';
@@ -151,12 +155,16 @@ const fnnames={
 '68':'MBP_LocalPattern',
 '69':'CSLBP_LocalPattern',
 '70':'CBP_LocalPattern',
-'71':'HorizontalSplitEffect',
-'72':'HorizontalSplitEffect',
-'73':'HorizontalSplitEffect',
-'74':'HorizontalSplitEffect',
-'75':'HorizontalSplitEffect',
-'76':'HorizontalSplitEffect',
+'71':'CCR_LocalPattern',
+'72':'ILTP_LocalPattern',
+'73':'CLBP_C_M_LocalPattern',
+'74':'LQP_LocalPattern',
+'75':'BGC_LocalPattern',
+'76':'GLBP_LocalPattern',
+'77':'HOG_Descriptor',
+'78':'BRIEF_Descriptor',
+'79':'GLBP_LocalPattern',
+'80':'GLBP_LocalPattern',
 
 };
 
@@ -169,11 +177,21 @@ var div_1 = document.getElementById("subinputs");
 
 
 var element = document.getElementById("pickeffect");
-currentEffect=window[fnnames[element.value]];
+var eleval1=element.value;
+if ((Math.floor(eleval1)>76)&&(is_cv_loaded==false)) {
+loadcv2_module();
+}
+currentEffect=window[fnnames[eleval1]];
 var effect_name=currentEffect.name;
 
 element.onchange=function(){
-currentEffect=window[fnnames[element.value]];
+var eleval1=element.value;
+
+if ((Math.floor(eleval1)>76)&&(is_cv_loaded==false)) {
+loadcv2_module();
+}
+
+currentEffect=window[fnnames[eleval1]];
 effect_name=currentEffect.name;
 set_subinputs();
 
@@ -211,6 +229,34 @@ const AutoDownload = (dataUrl, filename) => {
   link.download = filename;
   link.click();
 };
+
+function loadJs(url, cb) {
+  var script = document.createElement('script');
+  script.setAttribute('src', url);
+  script.setAttribute('type', 'text/javascript');
+
+  jsloadedflag = false;
+  var loadFunction = function () {
+    if (jsloadedflag) return;
+    jsloadedflag = true;
+    cb();
+  };
+  script.onload = loadFunction;
+  script.onreadystatechange = loadFunction;
+  document.getElementsByTagName("head")[0].appendChild(script);
+};
+
+function factorial(n) {
+  loadJs('functions.js', function() {
+    factorial(n);
+  });
+}
+
+function loadcv2_module(){
+var cvsrc='https://docs.opencv.org/3.4.0/opencv.js';
+loadJs(cvsrc, function() {});
+is_cv_loaded=jsloadedflag;
+}
 
 function downloadCanvasImage(){
 var tmpimg    = canvas.toDataURL("image/png");
@@ -279,6 +325,57 @@ div_1.appendChild(inp1);
 InputFieldsAll=[inp1];
 }
 
+if (effect_name=='ILTP_LocalPattern'){
+div_1.appendChild(document.createTextNode("T Value:"));
+var inp1 = document.createElement("input");
+inp1.value='3'
+div_1.appendChild(inp1);
+div_1.appendChild(document.createTextNode("Lower(0) or Upper(1):"));
+var inp2 = document.createElement("input");
+inp2.value='0'
+div_1.appendChild(inp2);
+InputFieldsAll=[inp1,inp2];
+}
+
+if (effect_name=='CLBP_C_M_LocalPattern'){
+div_1.appendChild(document.createTextNode("CLBP-C(0) CLBP-M(1):"));
+var inp1 = document.createElement("input");
+inp1.value='0'
+div_1.appendChild(inp1);
+InputFieldsAll=[inp1];
+}
+
+if (effect_name=='LQP_LocalPattern'){
+div_1.appendChild(document.createTextNode("TValue 1:"));
+var inp1 = document.createElement("input");
+inp1.value='3'
+div_1.appendChild(inp1);
+div_1.appendChild(document.createTextNode("TValue 2:"));
+var inp2 = document.createElement("input");
+inp2.value='6'
+div_1.appendChild(inp2);
+div_1.appendChild(document.createTextNode("LQP-2(0), LQP-1(1), LQP+1(2), LQP+2(3):"));
+var inp3 = document.createElement("input");
+inp3.value='0'
+div_1.appendChild(inp3);
+InputFieldsAll=[inp1,inp2,inp3];
+}
+
+if (effect_name=='BGC_LocalPattern'){
+div_1.appendChild(document.createTextNode("BGC1(0), BGC2_1(1), BGC2_2(2), BGC3(3):"));
+var inp1 = document.createElement("input");
+inp1.value='0'
+div_1.appendChild(inp1);
+InputFieldsAll=[inp1];
+}
+
+if (effect_name=='HOG_Descriptor'){
+div_1.appendChild(document.createTextNode("gradientX(0), gradientY(1), Magnitude(2), Orientation(3):"));
+var inp1 = document.createElement("input");
+inp1.value='0'
+div_1.appendChild(inp1);
+InputFieldsAll=[inp1];
+}
 
 check_2();
 }
@@ -485,6 +582,7 @@ for (let i = 0; i < data.length; i += 4) {
   grayImage[i / 4] = grayValue;
 }
 
+var base2nums=[128,64,32,16,8,4,2,1];
 var a1,a2,a3,a4,a5,a6,a7,a8,a9=0;
 const lgpImage = new Array(width * height);
 for (let i = 1; i < height - 1; i++) {
@@ -501,16 +599,15 @@ for (let i = 1; i < height - 1; i++) {
 	// [a1,a2,a3,
 	//	a8,center,a4,
 	//	a7,a6,a5]
+	var g_mean=Math.abs(a1+a2+a3+a4+a5+a6+a7+a8-8*center)/8;
 
-	code=(a1>a5)+(a3>a7)*2+(a2>a6)*4+(a4>a8)*8;
-	lgpImage[i * width + j] = code;
+	label=(Math.abs(a1-center)>g_mean)*base2nums[0]+(Math.abs(a2-center)>g_mean)*base2nums[1]+(Math.abs(a3-center)>g_mean)*base2nums[2]+(Math.abs(a4-center)>g_mean)*base2nums[3]+(Math.abs(a5-center)>g_mean)*base2nums[4]+(Math.abs(a6-center)>g_mean)*base2nums[5]+(Math.abs(a7-center)>g_mean)*base2nums[6]+(Math.abs(a8-center)>g_mean)*base2nums[7];
+	lgpImage[i * width + j] = label;
   }
 }
 
 for (let i = 0; i < lgpImage.length; i++) {
-  const code = lgpImage[i];
-  //const value = Math.round((code / 255) * 255);
-  const value =code;
+  const value = lgpImage[i];
   data[i * 4] = value;
   data[i * 4 + 1] = value;
   data[i * 4 + 2] = value;
@@ -558,7 +655,7 @@ for (let i = 1; i < height - 1; i++) {
 	low=center-th;
 	high=center+th;
 	
-	ltp_l=(a1<=high)*base2nums[0]+(a2<=high)*base2nums[1]+(a3<=high)*base2nums[2]+(a4<=high)*base2nums[3]+(a5<=high)*base2nums[4]+(a6<=high)*base2nums[5]+(a7<=high)*base2nums[6]+(a8<=high)*base2nums[7];
+	ltp_l=(a1<=low)*base2nums[0]+(a2<=low)*base2nums[1]+(a3<=low)*base2nums[2]+(a4<=low)*base2nums[3]+(a5<=low)*base2nums[4]+(a6<=low)*base2nums[5]+(a7<=low)*base2nums[6]+(a8<=low)*base2nums[7];
 	ltp_h=(a1>high)*base2nums[0]+(a2>high)*base2nums[1]+(a3>high)*base2nums[2]+(a4>high)*base2nums[3]+(a5>high)*base2nums[4]+(a6>high)*base2nums[5]+(a7>high)*base2nums[6]+(a8>high)*base2nums[7];
 	
 	ltp_low[i * width + j] = ltp_l;
@@ -680,16 +777,13 @@ for (let i = 1; i < height - 1; i++) {
 	a6=grayImage[(i + 1) * width + j];
 	a7=grayImage[(i + 1) * width + (j - 1)];
 	a8=grayImage[i * width + (j - 1)];
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=TS0_condition(a1,center)*base3nums[0]+TS0_condition(a2,center)*base3nums[1]+TS0_condition(a3,center)*base3nums[2]+TS0_condition(a4,center)*base3nums[3]+TS0_condition(a5,center)*base3nums[4]+TS0_condition(a6,center)*base3nums[5]+TS0_condition(a7,center)*base3nums[6]+TS0_condition(a8,center)*base3nums[7];
 	label_im[i * width + j]=label;
   }
 }
-//16777216
+
 for (let i = 0; i < label_im.length; i++) {
-  const value =Math.floor((label_im[i]/6560)*16777216);
+  const value =Math.floor((label_im[i]/6560)*16777216);//normalize to rgb range 0-256**3
   let r=Math.floor(value/(256**2));
   let g=Math.floor((value%(256**2))/256);
   let b=Math.floor(value%256);
@@ -731,16 +825,13 @@ for (let i = 1; i < height - 1; i++) {
 	a6=grayImage[(i + 1) * width + j];
 	a7=grayImage[(i + 1) * width + (j - 1)];
 	a8=grayImage[i * width + (j - 1)];
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=TS1_condition(a1,center,T_value)*base3nums[0]+TS1_condition(a2,center,T_value)*base3nums[1]+TS1_condition(a3,center,T_value)*base3nums[2]+TS1_condition(a4,center,T_value)*base3nums[3]+TS1_condition(a5,center,T_value)*base3nums[4]+TS1_condition(a6,center,T_value)*base3nums[5]+TS1_condition(a7,center,T_value)*base3nums[6]+TS1_condition(a8,center,T_value)*base3nums[7];
 	label_im[i * width + j]=label;
   }
 }
-//16777216
+
 for (let i = 0; i < label_im.length; i++) {
-  let value =Math.floor((label_im[i]/6560)*16777216);
+  let value =Math.floor((label_im[i]/6560)*16777216);//normalize to rgb range 0-256**3
   let r=Math.floor(value/(256**2));
   let g=Math.floor((value%(256**2))/256);
   let b=Math.floor(value%256);
@@ -781,16 +872,12 @@ for (let i = 1; i < height - 1; i++) {
 	a6=grayImage[(i + 1) * width + j];
 	a7=grayImage[(i + 1) * width + (j - 1)];
 	//a8=grayImage[i * width + (j - 1)];
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=STS_condition(a4,center,T_value)*base3nums[4]+STS_condition(a5,center,T_value)*base3nums[5]+STS_condition(a6,center,T_value)*base3nums[6]+STS_condition(a7,center,T_value)*base3nums[7];
 	label_im[i * width + j]=label;
   }
 }
-//16777216
 for (let i = 0; i < label_im.length; i++) {
-  let value =Math.floor((label_im[i]/81)*255);
+  let value =Math.floor((label_im[i]/81)*255);//normalize to range 0-255
   let r=value;
   let g=value;
   let b=value;
@@ -887,16 +974,12 @@ for (let i = 1; i < height - 1; i++) {
 	a6=grayImage[(i + 1) * width + j];
 	a7=grayImage[(i + 1) * width + (j - 1)];
 	//a8=grayImage[i * width + (j - 1)];
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=(a4>center)*base2nums[4]+(a5>center)*base2nums[5]+(a6>center)*base2nums[6]+(a7>center)*base2nums[7];
 	label_im[i * width + j]=label;
   }
 }
-//16777216
 for (let i = 0; i < label_im.length; i++) {
-  let value =Math.floor((label_im[i]/16)*255);
+  let value =Math.floor((label_im[i]/16)*255);//normalize to range 0-255
   let r=value;
   let g=value;
   let b=value;
@@ -915,9 +998,7 @@ function ILBP_LocalPattern(pixels) {
 var data = pixels.data;
 var grayImage = new Array(width * height);
 for (let i = 0; i < data.length; i += 4) {
-  const grayValue = Math.round(
-	(data[i] + data[i + 1] + data[i + 2]) / 3
-  );
+  const grayValue = Math.round((data[i] + data[i + 1] + data[i + 2]) / 3);
   grayImage[i / 4] = grayValue;
 }
 
@@ -937,14 +1018,11 @@ for (let i = 1; i < height - 1; i++) {
 	a7=grayImage[(i + 1) * width + (j - 1)];
 	a8=grayImage[i * width + (j - 1)];
 	var mean=(a1+a2+a3+a4+a5+a6+a7+a8+center)/9;
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=(center>mean)*(256)+(a1>mean)*base2nums[0]+(a2>mean)*base2nums[1]+(a3>mean)*base2nums[2]+(a4>mean)*base2nums[3]+(a5>mean)*base2nums[4]+(a6>mean)*base2nums[5]+(a7>mean)*base2nums[6]+(a8>mean)*base2nums[7]-1;
 	label_im[i * width + j]=label;
   }
 }
-//16777216
+
 for (let i = 0; i < label_im.length; i++) {
   let value =Math.floor((label_im[i]/512)*16777216);
   let r=Math.floor(value/(256**2));
@@ -990,16 +1068,13 @@ for (let i = 1; i < height - 1; i++) {
 	var values=[a1,a2,a3,a4,a5,a6,a7,a8,center];
 	values.sort(function(a, b){return a-b});
 	var median=values[4];
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=(center>median)*(256)+(a1>median)*base2nums[0]+(a2>median)*base2nums[1]+(a3>median)*base2nums[2]+(a4>median)*base2nums[3]+(a5>median)*base2nums[4]+(a6>median)*base2nums[5]+(a7>median)*base2nums[6]+(a8>median)*base2nums[7]-1;
 	label_im[i * width + j]=label;
   }
 }
-//16777216
+
 for (let i = 0; i < label_im.length; i++) {
-  let value =Math.floor((label_im[i]/512)*16777216);
+  let value =Math.floor((label_im[i]/512)*16777216);//normalize to rgb range 0-256**3
   let r=Math.floor(value/(256**2));
   let g=Math.floor((value%(256**2))/256);
   let b=Math.floor(value%256);
@@ -1040,14 +1115,10 @@ for (let i = 1; i < height - 1; i++) {
 	a6=grayImage[(i + 1) * width + j];
 	a7=grayImage[(i + 1) * width + (j - 1)];
 	a8=grayImage[i * width + (j - 1)];
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=(a1>a5-T_value)*base2nums[4]+(a2>a6-T_value)*base2nums[5]+(a3>a7-T_value)*base2nums[6]+(a4>a8-T_value)*base2nums[7];
 	label_im[i * width + j]=label;
   }
 }
-//16777216
 for (let i = 0; i < label_im.length; i++) {
   let value =Math.floor((label_im[i]/16)*255);//normalizing to 0-255
   let r=value;
@@ -1091,14 +1162,11 @@ for (let i = 1; i < height - 1; i++) {
 	a7=grayImage[(i + 1) * width + (j - 1)];
 	a8=grayImage[i * width + (j - 1)];
 	var mean=(a1+a2+a3+a4+a5+a6+a7+a8+center)/9;
-	// [a1,a2,a3,
-	//	a8,center,a4,
-	//	a7,a6,a5]
 	label=(Math.abs(center-mean)>T_value)*base2nums[5]+(Math.abs(a1-a5)>T_value)*base2nums[4]+(Math.abs(a2-a6)>T_value)*base2nums[5]+(Math.abs(a3-a7)>T_value)*base2nums[6]+(Math.abs(a4-a8)>T_value)*base2nums[7];
 	label_im[i * width + j]=label;
   }
 }
-//16777216
+
 for (let i = 0; i < label_im.length; i++) {
   let value =Math.floor((label_im[i]/32)*255);//normalizing to 0-255
   let r=value;
@@ -1114,6 +1182,572 @@ pixels.data=data;
 return pixels;
 }
 
+function calculate_entropy(HistArray){
+//val=0;
+var val2=[];
+NumPixels=width*height;
+for (let i=0; i<HistArray.length; i++){
+prob=HistArray[i]/NumPixels;
+if (prob==0) prob=1;
+
+//val+=(prob*Math.log2(prob));
+val2.push(prob*Math.log2(prob));
+}
+//return (-val);
+return val2;
+}
+
+function CCR_LocalPattern(pixels) {
+//Coordinated Clusters Representation
+var data = pixels.data;
+var grayImage = new Array(width * height);
+var histogram = new Array(256);
+for (let i=0; i<256; i++) histogram[i] = 0;
+for (let i = 0; i < data.length; i += 4) {
+  const grayValue = Math.round((data[i] + data[i + 1] + data[i + 2]) / 3);
+  grayImage[i / 4] = grayValue;
+  histogram[grayValue]++;
+}
+
+diff_array=new Array(256);
+prob_array=calculate_entropy(histogram);
+for (let i = 0; i < 256; i++){
+ent1=prob_array.slice(0,i).reduce((a, b) => a + b, 0);
+ent2=prob_array.slice(i,).reduce((a, b) => a + b, 0);
+diff1=Math.abs(ent1-ent2);
+diff_array[i]=diff1;
+}
+
+var T_value=diff_array.indexOf(Math.min(...diff_array));
+var base2nums=[128,64,32,16,8,4,2,1];
+
+var a1,a2,a3,a4,a5,a6,a7,a8,a9=0;
+var label_im = new Array(width * height);
+for (let i = 1; i < height - 1; i++) {
+  for (let j = 1; j < width - 1; j++) {
+	var center = grayImage[i * width + j];
+	a1=grayImage[(i - 1) * width + (j - 1)];
+	a2=grayImage[(i - 1) * width + j];
+	a3=grayImage[(i - 1) * width + (j + 1)];
+	a4=grayImage[i * width + (j + 1)];
+	a5=grayImage[(i + 1) * width + (j + 1)];
+	a6=grayImage[(i + 1) * width + j];
+	a7=grayImage[(i + 1) * width + (j - 1)];
+	a8=grayImage[i * width + (j - 1)];
+
+	label=(center>T_value)*(256)+(a1>T_value)*base2nums[0]+(a2>T_value)*base2nums[1]+(a3>T_value)*base2nums[2]+(a4>T_value)*base2nums[3]+(a5>T_value)*base2nums[4]+(a6>T_value)*base2nums[5]+(a7>T_value)*base2nums[6]+(a8>T_value)*base2nums[7]-1;
+	label_im[i * width + j]=label;
+  }
+}
+
+for (let i = 0; i < label_im.length; i++) {
+  let value =Math.floor((label_im[i]/512)*16777216);//normalize to rgb range 0-256**3
+  let r=Math.floor(value/(256**2));
+  let g=Math.floor((value%(256**2))/256);
+  let b=Math.floor(value%256);
+  
+  data[i * 4] = r;
+  data[i * 4 + 1] = g;
+  data[i * 4 + 2] = b;
+  data[i * 4 + 3] = 255;
+}
+pixels.data=data;
+return pixels;
+}
+
+function ILTP_LocalPattern(pixels) {
+//Improved local ternary pattern
+var data = pixels.data;
+var grayImage = new Array(width * height);
+
+for (let i = 0; i < data.length; i += 4) {
+  var grayValue = Math.round((data[i] + data[i + 1] + data[i + 2]) / 3);
+  grayImage[i / 4] = grayValue;
+}
+
+//var th=3;
+var th=Math.floor(InputFieldsAll[0].value);
+var choice=Math.floor(InputFieldsAll[1].value);
+var code=0;
+
+var base2nums=[128,64,32,16,8,4,2,1];
+var a1,a2,a3,a4,a5,a6,a7,a8,a9=0;
+var ltp_low = new Array(width * height);
+var ltp_high = new Array(width * height);
+for (let i = 1; i < height - 1; i++) {
+  for (let j = 1; j < width - 1; j++) {
+	center = grayImage[i * width + j];
+	a1=grayImage[(i - 1) * width + (j - 1)];
+	a2=grayImage[(i - 1) * width + j];
+	a3=grayImage[(i - 1) * width + (j + 1)];
+	a4=grayImage[i * width + (j + 1)];
+	a5=grayImage[(i + 1) * width + (j + 1)];
+	a6=grayImage[(i + 1) * width + j];
+	a7=grayImage[(i + 1) * width + (j - 1)];
+	a8=grayImage[i * width + (j - 1)];
+	mean=Math.round((a1+a2+a3+a4+a5+a6+a7+a8+center)/9.0);
+	low=mean-th;
+	high=mean+th;
+	
+	ltp_l=(center<=low)*255+(a1<=low)*base2nums[0]+(a2<=low)*base2nums[1]+(a3<=high)*base2nums[2]+(a4<=low)*base2nums[3]+(a5<=low)*base2nums[4]+(a6<=low)*base2nums[5]+(a7<=low)*base2nums[6]+(a8<=low)*base2nums[7];
+	ltp_h=(a1>high)*base2nums[0]+(a2>high)*base2nums[1]+(a3>high)*base2nums[2]+(a4>high)*base2nums[3]+(a5>high)*base2nums[4]+(a6>high)*base2nums[5]+(a7>high)*base2nums[6]+(a8>high)*base2nums[7];
+	
+	ltp_low[i * width + j] = ltp_l;
+	ltp_high[i * width + j] = ltp_h;
+  }
+}
+
+for (let i = 0; i < ltp_low.length; i++) {
+if (choice==0){
+  code = ltp_low[i];
+  } else {
+  code = ltp_high[i];
+  }
+  var value = Math.round((code / 512.0) * 255.0);
+  //var value =Math.round(code);
+  data[i * 4] = value;
+  data[i * 4 + 1] = value;
+  data[i * 4 + 2] = value;
+  data[i * 4 + 3] = 255;
+}
+pixels.data=data;
+return pixels;
+}
+
+function CLBP_C_M_LocalPattern(pixels) {
+//Completed Local Binary Pattern
+var data = pixels.data;
+var graysum=0
+var grayImage = new Array(width * height);
+for (let i = 0; i < data.length; i += 4) {
+  const grayValue = Math.round((data[i] + data[i + 1] + data[i + 2]) / 3);
+  grayImage[i / 4] = grayValue;
+  graysum+=grayValue;
+}
+avgpixel=Math.round(graysum/(width * height));
+
+var choice=Math.floor(InputFieldsAll[0].value);
+var base2nums=[128,64,32,16,8,4,2,1];
+
+var a1,a2,a3,a4,a5,a6,a7,a8,a9=0;
+var labelim_1 = new Array(width * height);
+var labelim_2 = new Array(width * height);
+for (let i = 1; i < height - 1; i++) {
+  for (let j = 1; j < width - 1; j++) {
+	var center = grayImage[i * width + j];
+	a1=grayImage[(i - 1) * width + (j - 1)];
+	a2=grayImage[(i - 1) * width + j];
+	a3=grayImage[(i - 1) * width + (j + 1)];
+	a4=grayImage[i * width + (j + 1)];
+	a5=grayImage[(i + 1) * width + (j + 1)];
+	a6=grayImage[(i + 1) * width + j];
+	a7=grayImage[(i + 1) * width + (j - 1)];
+	a8=grayImage[i * width + (j - 1)];
+		
+	label_1=Math.round(center>avgpixel);
+	labelim_1[i * width + j]=label_1;
+	
+	var T_delta=(a1+a2+a3+a4+a5+a6+a7+a8-8*center)/8;
+	label_2=(Math.abs(a1-center)>T_delta)*base2nums[0]+(Math.abs(a2-center)>T_delta)*base2nums[1]+(Math.abs(a3-center)>T_delta)*base2nums[2]+(Math.abs(a4-center)>T_delta)*base2nums[3]+(Math.abs(a5-center)>T_delta)*base2nums[4]+(Math.abs(a6-center)>T_delta)*base2nums[5]+(Math.abs(a7-center)>T_delta)*base2nums[6]+(Math.abs(a8-center)>T_delta)*base2nums[7];
+	labelim_2[i * width + j]=label_2;
+  }
+}
+
+var value=0;
+for (let i = 0; i < labelim_1.length; i++) {
+if (choice==0){
+  value =Math.floor(labelim_1[i]*255);
+  } else {
+  value =Math.floor(labelim_2[i]);
+  }
+  let r=value;
+  let g=value;
+  let b=value;
+  
+  data[i * 4] = r;
+  data[i * 4 + 1] = g;
+  data[i * 4 + 2] = b;
+  data[i * 4 + 3] = 255;
+}
+pixels.data=data;
+return pixels;
+}
+
+function LQP_LocalPattern(pixels) {
+//local quinary pattern
+var data = pixels.data;
+var grayImage = new Array(width * height);
+
+for (let i = 0; i < data.length; i += 4) {
+  const grayValue = Math.round(
+	(data[i] + data[i + 1] + data[i + 2]) / 3
+  );
+  grayImage[i / 4] = grayValue;
+}
+
+var Tvalue_1=Math.floor(InputFieldsAll[0].value);//5
+var Tvalue_2=Math.floor(InputFieldsAll[1].value);//10
+var choice=InputFieldsAll[2].value;
+
+var base2nums=[128,64,32,16,8,4,2,1];
+var a1,a2,a3,a4,a5,a6,a7,a8,a9=0;
+const im_minus2 = new Array(width * height);
+const im_minus1 = new Array(width * height);
+const im_plus1 = new Array(width * height);
+const im_plus2 = new Array(width * height);
+for (let i = 1; i < height - 1; i++) {
+  for (let j = 1; j < width - 1; j++) {
+	var center = grayImage[i * width + j];//a5
+	a1=grayImage[(i - 1) * width + (j - 1)];
+	a2=grayImage[(i - 1) * width + j];
+	a3=grayImage[(i - 1) * width + (j + 1)];
+	a4=grayImage[i * width + (j + 1)];
+	a5=grayImage[(i + 1) * width + (j + 1)];
+	a6=grayImage[(i + 1) * width + j];
+	a7=grayImage[(i + 1) * width + (j - 1)];
+	a8=grayImage[i * width + (j - 1)];
+
+	L_1=center-Tvalue_1;
+	H_1=center+Tvalue_1;
+	L_2=center-Tvalue_2;
+	H_2=center+Tvalue_2;
+	
+	v1=(a1<=L_1)*base2nums[0]+(a2<=L_1)*base2nums[1]+(a3<=L_1)*base2nums[2]+(a4<=L_1)*base2nums[3]+(a5<=L_1)*base2nums[4]+(a6<=L_1)*base2nums[5]+(a7<=L_1)*base2nums[6]+(a8<=L_1)*base2nums[7];
+	v2=(a1<=L_2)*base2nums[0]+(a2<=L_2)*base2nums[1]+(a3<=L_2)*base2nums[2]+(a4<=L_2)*base2nums[3]+(a5<=L_2)*base2nums[4]+(a6<=L_2)*base2nums[5]+(a7<=L_2)*base2nums[6]+(a8<=L_2)*base2nums[7];
+	v3=(a1>H_1)*base2nums[0]+(a2>H_1)*base2nums[1]+(a3>H_1)*base2nums[2]+(a4>H_1)*base2nums[3]+(a5>H_1)*base2nums[4]+(a6>H_1)*base2nums[5]+(a7>H_1)*base2nums[6]+(a8>H_1)*base2nums[7];
+	v4=(a1>H_2)*base2nums[0]+(a2>H_2)*base2nums[1]+(a3>H_2)*base2nums[2]+(a4>H_2)*base2nums[3]+(a5>H_2)*base2nums[4]+(a6>H_2)*base2nums[5]+(a7>H_2)*base2nums[6]+(a8>H_2)*base2nums[7];
+	
+	im_minus2[i * width + j] = v2;
+	im_minus1[i * width + j] = v1;
+	im_plus1[i * width + j] = v3;
+	im_plus2[i * width + j] = v4;
+  }
+}
+
+var code=0;
+for (let i = 0; i < im_minus2.length; i++) {
+if (choice==0){
+  code = im_minus2[i];
+  } else if (choice==1){
+  code = im_minus1[i];
+  } else if (choice==2){
+  code = im_plus1[i];
+  } else {
+  code = im_plus2[i];
+  }
+  var value =Math.round(code);
+  data[i * 4] = value;
+  data[i * 4 + 1] = value;
+  data[i * 4 + 2] = value;
+  data[i * 4 + 3] = 255;
+}
+pixels.data=data;
+return pixels;
+}
+
+function BGC_LocalPattern(pixels) {
+//Binary Gradient Contours
+var data = pixels.data;
+var grayImage = new Array(width * height);
+for (let i = 0; i < data.length; i += 4) {
+  const grayValue = Math.round((data[i] + data[i + 1] + data[i + 2]) / 3);
+  grayImage[i / 4] = grayValue;
+}
+
+var choice=InputFieldsAll[0].value;
+var base2nums=[128,64,32,16,8,4,2,1];
+
+var a1,a2,a3,a4,a5,a6,a7,a8,a9=0;
+var labelim_1 = new Array(width * height);
+var labelim_2_1 = new Array(width * height);
+var labelim_2_2 = new Array(width * height);
+var labelim_3 = new Array(width * height);
+for (let i = 1; i < height - 1; i++) {
+  for (let j = 1; j < width - 1; j++) {
+	var center = grayImage[i * width + j];
+	a1=grayImage[(i - 1) * width + (j - 1)];
+	a2=grayImage[(i - 1) * width + j];
+	a3=grayImage[(i - 1) * width + (j + 1)];
+	a4=grayImage[i * width + (j + 1)];
+	a5=grayImage[(i + 1) * width + (j + 1)];
+	a6=grayImage[(i + 1) * width + j];
+	a7=grayImage[(i + 1) * width + (j - 1)];
+	a8=grayImage[i * width + (j - 1)];
+
+	label_1=(a1>a2)*base2nums[0]+(a2>a3)*base2nums[1]+(a3>a4)*base2nums[2]+(a4>a5)*base2nums[3]+(a5>a6)*base2nums[4]+(a6>a7)*base2nums[5]+(a7>a8)*base2nums[6]+(a8>a1)*base2nums[7];
+	labelim_1[i * width + j]=label_1;
+	
+	//{1, 7, 5, 3, 1}
+	label_2_1=(a2>a8)*base2nums[4]+(a8>a6)*base2nums[5]+(a6>a4)*base2nums[6]+(a4>a2)*base2nums[7];
+	labelim_2_1[i * width + j]=label_2_1;
+	
+	//{0, 6, 4, 2, 0}
+	label_2_2=(a1>a7)*base2nums[4]+(a7>a5)*base2nums[5]+(a5>a3)*base2nums[6]+(a3>a1)*base2nums[7];
+	labelim_2_2[i * width + j]=label_2_2;
+	
+	//{0, 5, 2, 7, 4, 1, 6, 3, 0}
+	label_3=(a1>a6)*base2nums[0]+(a6>a3)*base2nums[1]+(a3>a8)*base2nums[2]+(a8>a5)*base2nums[3]+(a5>a2)*base2nums[4]+(a2>a7)*base2nums[5]+(a7>a4)*base2nums[6]+(a4>a1)*base2nums[7];
+	labelim_3[i * width + j]=label_3;
+  }
+}
+
+var value=0;
+for (let i = 0; i < labelim_1.length; i++) {
+  if (choice==0){
+  value = Math.floor(labelim_1[i]);
+  } else if (choice==1){
+  value = Math.floor(labelim_2_1[i]*16);
+  } else if (choice==2){
+  value = Math.floor(labelim_2_2[i]*16);
+  } else {
+  value = Math.floor(labelim_3[i]);
+  }
+  
+  let r=value;
+  let g=value;
+  let b=value;
+  
+  data[i * 4] = r;
+  data[i * 4 + 1] = g;
+  data[i * 4 + 2] = b;
+  data[i * 4 + 3] = 255;
+}
+pixels.data=data;
+return pixels;
+}
+
+function GLBP_LocalPattern(pixels) {
+//gradient local binary pattern
+var data = pixels.data;
+var grayImage = new Array(width * height);
+
+for (let i = 0; i < data.length; i += 4) {
+  const grayValue = Math.round(
+	(data[i] + data[i + 1] + data[i + 2]) / 3
+  );
+  grayImage[i / 4] = grayValue;
+}
+
+var base2nums=[128,64,32,16,8,4,2,1];
+var a1,a2,a3,a4,a5,a6,a7,a8,a9=0;
+const labelim = new Array(width * height);
+for (let i = 1; i < height - 1; i++) {
+  for (let j = 1; j < width - 1; j++) {
+	const center = grayImage[i * width + j];//a5
+	a1=grayImage[(i - 1) * width + (j - 1)];
+	a2=grayImage[(i - 1) * width + j];
+	a3=grayImage[(i - 1) * width + (j + 1)];
+	a4=grayImage[i * width + (j + 1)];
+	a5=grayImage[(i + 1) * width + (j + 1)];
+	a6=grayImage[(i + 1) * width + j];
+	a7=grayImage[(i + 1) * width + (j - 1)];
+	a8=grayImage[i * width + (j - 1)];
+	// [a1,a2,a3,
+	//	a8,center,a4,
+	//	a7,a6,a5]
+	var g_mean=Math.abs(a1-a5)+Math.abs(a3-a7)/2;
+
+	label=(Math.abs(a1-center)>g_mean)*base2nums[0]+(Math.abs(a2-center)>g_mean)*base2nums[1]+(Math.abs(a3-center)>g_mean)*base2nums[2]+(Math.abs(a4-center)>g_mean)*base2nums[3]+(Math.abs(a5-center)>g_mean)*base2nums[4]+(Math.abs(a6-center)>g_mean)*base2nums[5]+(Math.abs(a7-center)>g_mean)*base2nums[6]+(Math.abs(a8-center)>g_mean)*base2nums[7];
+	labelim[i * width + j] = label;
+  }
+}
+
+for (let i = 0; i < labelim.length; i++) {
+  const value = labelim[i];
+  data[i * 4] = value;
+  data[i * 4 + 1] = value;
+  data[i * 4 + 2] = value;
+  data[i * 4 + 3] = 255;
+}
+pixels.data=data;
+return pixels;
+}
+
+function HOG_Descriptor(pixels) {
+var data = pixels.data;
+width = canvas.width;
+height = canvas.height;
+
+kernel_x = [1, 0, -1, 2, 0, -2, 1, 0, -1];//sobel x
+kernel_y = [1, 2, 1, 0, 0, 0, -1, -2, -1];//sobel y
+
+gray = new Uint8ClampedArray(data.length);
+for(var i = 0; i < data.length; i += 4) {
+	var avg = Math.round((data[i] + data[i+1] + data[i+2]) / 3);
+	gray[i] = gray[i+1] = gray[i+2] = avg;
+	gray[i+3] = 0;
+}
+
+
+var cellsize=4;
+var binsize=6;
+var choice=Math.floor(InputFieldsAll[0].value);
+
+GradX_im = new Uint8ClampedArray(data.length);
+GradY_im = new Uint8ClampedArray(data.length);
+Mag_im = new Uint8ClampedArray(data.length);
+Orient_array = new Uint8ClampedArray(data.length/4);
+Orient_im = new Uint8ClampedArray(data.length);
+HOG_im = new Uint8ClampedArray(data.length);
+
+var x1=0;
+var y1=0;
+var index=0;
+var out=0;
+for(var i = 0; i < gray.length; i += 4) {
+index=i/4;
+x1=index%width;
+y1=Math.floor(index/width);
+
+x_m1=x1-1;
+y_m1=y1-1;
+x_p1=x1+1;
+y_p1=y1+1;
+if (x_m1<0){x_m1=0}
+if (y_m1<0){y_m1=0}
+if (x_p1>=width){x_p1=width-1}
+if (y_p1>=height){y_p1=height-1}
+
+var box=[
+gray[(y_m1*width+x_m1)*4],gray[(y_m1*width+x1)*4],gray[(y_m1*width+x_p1)*4],
+gray[(y1*width+x_m1)*4],gray[i],gray[(y1*width+x_p1)*4],
+gray[(y_p1*width+x_m1)*4],gray[(y_p1*width+x1)*4],gray[(y_p1*width+x_p1)*4],
+];
+
+var conv_x = (kernel_x[0] * box[0]) + (kernel_x[1] * box[1]) + (kernel_x[2] * box[2])
+	+ (kernel_x[3] * box[3]) + (kernel_x[4] * box[4]) + (kernel_x[5] * box[5])
+	+ (kernel_x[6] * box[6]) + (kernel_x[7] * box[7]) + (kernel_x[8] * box[8]);
+	
+var conv_y = (kernel_y[0] * box[0]) + (kernel_y[1] * box[1]) + (kernel_y[2] * box[2])
+	+ (kernel_y[3] * box[3]) + (kernel_y[4] * box[4]) + (kernel_y[5] * box[5])
+	+ (kernel_y[6] * box[6]) + (kernel_y[7] * box[7]) + (kernel_y[8] * box[8]);
+	
+grad1=Math.sqrt(conv_x**2+conv_y**2);
+orient1=Math.atan2(conv_y, conv_x)
+orient2 = Math.abs(orient1);
+orient2 *= (180 / Math.PI);
+if (orient2 < 0) {
+  orient2 += 180;
+}
+orient2 *= 255 / 180;
+
+GradX_im[i] = GradX_im[i+1] = GradX_im[i+2]=Math.floor(conv_x);
+GradY_im[i] = GradY_im[i+1] = GradY_im[i+2]=Math.floor(conv_y);
+Mag_im[i] = Mag_im[i+1] = Mag_im[i+2]=Math.floor(grad1);
+Orient_im[i] = Orient_im[i+1] = Orient_im[i+2]=Math.floor(orient2);
+Orient_array[i/4] = orient1;
+
+if(choice==0){out=GradX_im[i]}
+if(choice==1){out=GradY_im[i]}
+if(choice==2){out=Mag_im[i]}
+if(choice==3){out=Orient_im[i]}
+data[i] = data[i+1] = data[i+2] = out;
+}
+
+histograms=extractHistograms(Mag_im,Orient_array,cellsize,binsize);
+histbin=extractHOGFromHistograms(histograms);
+console.log(histbin);
+debugger;
+pixels.data=data;
+return pixels;
+}
+
+function extractHistograms(Mag_im,Orient_array,cellSize,binsize) {
+  var cellsWide = Math.floor(width / cellSize);
+  var cellsHigh = Math.floor(height / cellSize);
+
+  var histograms = new Array(cellsHigh);
+
+  for (var i = 0; i < cellsHigh; i++) {
+    histograms[i] = new Array(cellsWide);
+
+    for (var j = 0; j < cellsWide; j++) {
+      histograms[i][j] = getHistogram(Mag_im,Orient_array, j * cellSize, i * cellSize,
+                                      cellSize, binsize);
+    }
+  }
+  return histograms;
+}
+
+function getHistogram(Mag_im,Orient_array, x, y, size, binsize) {
+  var histogram = zeros(binsize);
+
+  for (var i = 0; i < size; i++) {
+    for (var j = 0; j < size; j++) {
+	  var flatpoint=(y + i)*width+x + j;
+      var bin = binFor(Orient_array[flatpoint], binsize);
+      histogram[bin] += Mag_im[flatpoint*4];
+    }
+  }
+  return histogram;
+}
+
+function binFor(radians, binsize) {
+  var angle = radians * (180 / Math.PI);
+  if (angle < 0) {
+    angle += 180;
+  }
+
+  // center the first bin around 0
+  angle += 90 / binsize;
+  angle %= 180;
+
+  var bin = Math.floor(angle / 180 * binsize);
+  return bin;
+}
+
+function zeros(size) {
+  var array = new Array(size);
+  for (var i = 0; i < size; i++) {
+    array[i] = 0;
+  }
+  return array;
+}
+
+function L2_normalize(vector) {
+    var sum = 0;
+	var epsilon = 0.00001;
+    for (var i = 0; i < vector.length; i++) {
+      sum += Math.pow(vector[i], 2);
+    }
+    var denom = Math.sqrt(sum + epsilon);
+    for (var i = 0; i < vector.length; i++) {
+      vector[i] /= denom;
+    }
+  }
+  
+function extractHOGFromHistograms(histograms) {
+  var blockSize = 2;
+  var blockStride = (blockSize / 2);
+
+  var blocks = [];
+  var blocksHigh = histograms.length - blockSize + 1;
+  var blocksWide = histograms[0].length - blockSize + 1;
+
+  for (var y = 0; y < blocksHigh; y += blockStride) {
+    for (var x = 0; x < blocksWide; x += blockStride) {
+      var block = getBlock(histograms, x, y, blockSize);
+      L2_normalize(block);
+      blocks.push(block);
+    }
+  }
+  return Array.prototype.concat.apply([], blocks);
+}
+
+function getBlock(matrix, x, y, length) {
+  var square = [];
+  for (var i = y; i < y + length; i++) {
+    for (var j = x; j < x + length; j++) {
+      square.push(matrix[i][j]);
+    }
+  }
+  return Array.prototype.concat.apply([], square);
+}
+
+
+function BRIEF_Descriptor(pixels) {
+
+}
 
 
 </script>
