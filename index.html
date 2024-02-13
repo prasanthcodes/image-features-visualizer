@@ -97,6 +97,7 @@ color: #F386FF;
 <option value="75">BGC LocalPattern</option>
 <option value="76">GLBP LocalPattern</option>
 <option value="77">HOG Descriptor</option>
+<option value="78">Harris CornerDetection</option>
 
 </select>
 
@@ -162,7 +163,7 @@ const fnnames={
 '75':'BGC_LocalPattern',
 '76':'GLBP_LocalPattern',
 '77':'HOG_Descriptor',
-'78':'BRIEF_Descriptor',
+'78':'Harris_Descriptor',
 '79':'GLBP_LocalPattern',
 '80':'GLBP_LocalPattern',
 
@@ -370,11 +371,19 @@ InputFieldsAll=[inp1];
 }
 
 if (effect_name=='HOG_Descriptor'){
-div_1.appendChild(document.createTextNode("gradientX(0), gradientY(1), Magnitude(2), Orientation(3):"));
+div_1.appendChild(document.createTextNode("GradientX(0), GradientY(1), Magnitude(2), Orientation(3), HOG(4):"));
 var inp1 = document.createElement("input");
 inp1.value='0'
 div_1.appendChild(inp1);
-InputFieldsAll=[inp1];
+div_1.appendChild(document.createTextNode("Cellsize:"));
+var inp2 = document.createElement("input");
+inp2.value='15'
+div_1.appendChild(inp2);
+div_1.appendChild(document.createTextNode("Binsize:"));
+var inp3 = document.createElement("input");
+inp3.value='6'
+div_1.appendChild(inp3);
+InputFieldsAll=[inp1,inp2,inp3];
 }
 
 check_2();
@@ -1563,32 +1572,39 @@ pixels.data=data;
 return pixels;
 }
 
+findMax = a => a.reduce((res,cur) => res < cur ? cur : res ,-Infinity);
+findMin = a => a.reduce((res,cur) => res > cur ? cur : res ,Infinity);
+
 function HOG_Descriptor(pixels) {
 var data = pixels.data;
 width = canvas.width;
 height = canvas.height;
 
-kernel_x = [1, 0, -1, 2, 0, -2, 1, 0, -1];//sobel x
-kernel_y = [1, 2, 1, 0, 0, 0, -1, -2, -1];//sobel y
-
 gray = new Uint8ClampedArray(data.length);
 for(var i = 0; i < data.length; i += 4) {
-	var avg = Math.round((data[i] + data[i+1] + data[i+2]) / 3);
-	gray[i] = gray[i+1] = gray[i+2] = avg;
-	gray[i+3] = 0;
+var r = data[i],
+	g = data[i + 1],
+	b = data[i + 2],
+	a = data[i + 3];
+
+var luma = Math.floor(r * 299/1000 + g * 587/1000
+  + b * 114/1000);
+gray[i] = gray[i+1] = gray[i+2] = luma;
+gray[i+3] = 255;
 }
 
-
-var cellsize=4;
-var binsize=6;
+//var cellsize=15;
+//var binsize=6;
 var choice=Math.floor(InputFieldsAll[0].value);
+var cellsize=Math.floor(InputFieldsAll[1].value);
+var binsize=Math.floor(InputFieldsAll[2].value);
 
-GradX_im = new Uint8ClampedArray(data.length);
-GradY_im = new Uint8ClampedArray(data.length);
-Mag_im = new Uint8ClampedArray(data.length);
-Orient_array = new Uint8ClampedArray(data.length/4);
-Orient_im = new Uint8ClampedArray(data.length);
-HOG_im = new Uint8ClampedArray(data.length);
+len_1=data.length/4;
+GradX_array = new Array(len_1);
+GradY_array = new Array(len_1);
+Mag_array = new Array(len_1);
+Orient_array = new Array(len_1);
+HOG_im = new Uint8ClampedArray(len_1);
 
 var x1=0;
 var y1=0;
@@ -1608,76 +1624,127 @@ if (y_m1<0){y_m1=0}
 if (x_p1>=width){x_p1=width-1}
 if (y_p1>=height){y_p1=height-1}
 
-var box=[
-gray[(y_m1*width+x_m1)*4],gray[(y_m1*width+x1)*4],gray[(y_m1*width+x_p1)*4],
-gray[(y1*width+x_m1)*4],gray[i],gray[(y1*width+x_p1)*4],
-gray[(y_p1*width+x_m1)*4],gray[(y_p1*width+x1)*4],gray[(y_p1*width+x_p1)*4],
-];
+var prevX=gray[(y1*width+x_m1)*4];
+var nextX=gray[(y1*width+x_p1)*4];
+var prevY=gray[(y_m1*width+x1)*4];
+var nextY=gray[(y_p1*width+x1)*4];
 
-var conv_x = (kernel_x[0] * box[0]) + (kernel_x[1] * box[1]) + (kernel_x[2] * box[2])
-	+ (kernel_x[3] * box[3]) + (kernel_x[4] * box[4]) + (kernel_x[5] * box[5])
-	+ (kernel_x[6] * box[6]) + (kernel_x[7] * box[7]) + (kernel_x[8] * box[8]);
-	
-var conv_y = (kernel_y[0] * box[0]) + (kernel_y[1] * box[1]) + (kernel_y[2] * box[2])
-	+ (kernel_y[3] * box[3]) + (kernel_y[4] * box[4]) + (kernel_y[5] * box[5])
-	+ (kernel_y[6] * box[6]) + (kernel_y[7] * box[7]) + (kernel_y[8] * box[8]);
-	
+// kernel [-1, 0, 1]
+conv_x = -prevX + nextX;
+conv_y = -prevY + nextY;
+
 grad1=Math.sqrt(conv_x**2+conv_y**2);
-orient1=Math.atan2(conv_y, conv_x)
-orient2 = Math.abs(orient1);
-orient2 *= (180 / Math.PI);
-if (orient2 < 0) {
-  orient2 += 180;
+orient1=Math.atan2(conv_y, conv_x);
+
+GradX_array[index] = conv_x;
+GradY_array[index] = conv_y;
+Mag_array[index] = grad1;
+Orient_array[index] = orient1;
+
+if(choice==0){out=Math.floor((255+GradX_array[index])/2)}
+if(choice==1){out=Math.floor((255+GradY_array[index])/2)}
+if(choice==2){out=Math.floor(Mag_array[index])}
+if(choice==3){
+orient1=Orient_array[index];
+out = Math.abs(orient1);
+out *= (180 / Math.PI);
+if (out < 0) {
+  out += 180;
 }
-orient2 *= 255 / 180;
+out *= 255 / 180;
+}
+if(choice==4){
+//out=0;
+out=Math.floor(gray[i]/2);
+}
 
-GradX_im[i] = GradX_im[i+1] = GradX_im[i+2]=Math.floor(conv_x);
-GradY_im[i] = GradY_im[i+1] = GradY_im[i+2]=Math.floor(conv_y);
-Mag_im[i] = Mag_im[i+1] = Mag_im[i+2]=Math.floor(grad1);
-Orient_im[i] = Orient_im[i+1] = Orient_im[i+2]=Math.floor(orient2);
-Orient_array[i/4] = orient1;
-
-if(choice==0){out=GradX_im[i]}
-if(choice==1){out=GradY_im[i]}
-if(choice==2){out=Mag_im[i]}
-if(choice==3){out=Orient_im[i]}
 data[i] = data[i+1] = data[i+2] = out;
 }
 
-histograms=extractHistograms(Mag_im,Orient_array,cellsize,binsize);
-histbin=extractHOGFromHistograms(histograms);
-console.log(histbin);
-debugger;
+histograms=extractHistograms(Mag_array,Orient_array,cellsize,binsize);
+//histbin=extractHOGFromHistograms(histograms);
+
+//mn=findMin(histograms.flat(Infinity));
+//mx=findMax(histograms.flat(Infinity));
+
+if(choice==4){
 pixels.data=data;
+ctx.putImageData(pixels, 0, 0);
+
+ctx.lineWidth = 1;
+ctx.strokeStyle = "rgb(128, 255, 128)";//"green";
+
+var hhigh = histograms.length ;
+var hwide = histograms[0].length ;
+
+for (var y = 0; y < hhigh; y += 1) {
+for (var x = 0; x < hwide; x += 1) {
+  var hbin1 = histograms[y][x];
+  for (var i = 0; i < binsize; i += 1){
+  
+  magval=(hbin1[i]-currentMin)/(currentMax-currentMin);
+  //angle=i*(180/binsize);
+  radians=i*(Math.PI/binsize)+(Math.PI/2);
+  dx=(cellsize/2)*magval*Math.cos(radians);
+  dy=(cellsize/2)*magval*Math.sin(radians);
+  centerx=x*cellsize+Math.floor(cellsize/2);
+  centery=y*cellsize+Math.floor(cellsize/2);
+  startx=Math.floor(centerx-dx);
+  starty=Math.floor(centery-dy);
+  endx=Math.floor(centerx+dx);
+  endy=Math.floor(centery+dy);
+  
+ctx.beginPath();
+ctx.moveTo( startx, starty );
+ctx.lineTo( endx, endy );
+ctx.stroke();
+  }
+  }
+  }
+  
+pixels = ctx.getImageData(0, 0, width, height);
+currentMin=1e5;
+currentMax=0;
+
+}
+
+if(choice!=4){
+pixels.data=data;
+}
 return pixels;
 }
 
-function extractHistograms(Mag_im,Orient_array,cellSize,binsize) {
+function extractHistograms(Mag_array,Orient_array,cellSize,binsize) {
   var cellsWide = Math.floor(width / cellSize);
   var cellsHigh = Math.floor(height / cellSize);
-
   var histograms = new Array(cellsHigh);
-
   for (var i = 0; i < cellsHigh; i++) {
     histograms[i] = new Array(cellsWide);
-
     for (var j = 0; j < cellsWide; j++) {
-      histograms[i][j] = getHistogram(Mag_im,Orient_array, j * cellSize, i * cellSize,
+      histograms[i][j] = getHistogram(Mag_array,Orient_array, j * cellSize, i * cellSize,
                                       cellSize, binsize);
     }
   }
   return histograms;
 }
 
-function getHistogram(Mag_im,Orient_array, x, y, size, binsize) {
-  var histogram = zeros(binsize);
+var currentMin=1e5;
+var currentMax=0;
 
+function getHistogram(Mag_array,Orient_array, x, y, size, binsize) {
+  var histogram = zeros(binsize);
   for (var i = 0; i < size; i++) {
     for (var j = 0; j < size; j++) {
-	  var flatpoint=(y + i)*width+x + j;
-      var bin = binFor(Orient_array[flatpoint], binsize);
-      histogram[bin] += Mag_im[flatpoint*4];
+	  var flatpos=(y + i)*width+x + j;
+      var bin = binFor(Orient_array[flatpos], binsize);
+	  var magval=Mag_array[flatpos];
+      histogram[bin] += magval;
     }
+  }
+  for(var i = 0; i < binsize; i++){
+  histogram[i]/=(size*size*256);
+  if(histogram[i]<currentMin) currentMin=histogram[i];
+  if(histogram[i]>currentMax) currentMax=histogram[i];
   }
   return histogram;
 }
@@ -1687,11 +1754,9 @@ function binFor(radians, binsize) {
   if (angle < 0) {
     angle += 180;
   }
-
   // center the first bin around 0
   angle += 90 / binsize;
   angle %= 180;
-
   var bin = Math.floor(angle / 180 * binsize);
   return bin;
 }
@@ -1744,12 +1809,130 @@ function getBlock(matrix, x, y, length) {
   return Array.prototype.concat.apply([], square);
 }
 
+function Harris_Descriptor(pixels) {
+var data = pixels.data;
+width = canvas.width;
+height = canvas.height;
 
-function BRIEF_Descriptor(pixels) {
+kernel_x = [1, 0, -1, 2, 0, -2, 1, 0, -1];//sobel x
+kernel_y = [1, 2, 1, 0, 0, 0, -1, -2, -1];//sobel y
 
+gray = new Uint8ClampedArray(data.length);
+tdata1 = new Uint8ClampedArray(data.length/4);
+for(var i = 0; i < data.length; i += 4) {
+	//var avg = Math.round((data[i] + data[i+1] + data[i+2]) / 3);
+	var avg = Math.floor(data[i] * 0.299 + data[i+1] * 0.587
+  + data[i+2] * 0.114);
+	gray[i] = gray[i+1] = gray[i+2] = avg;
+	gray[i+3] = 0;
+	tdata1[i/4]=avg;
 }
 
 
+//var choice=Math.floor(InputFieldsAll[0].value);
+
+len_1=data.length/4;
+GradX_array = new Array(len_1);
+GradY_array = new Array(len_1);
+GradXY_array = new Array(len_1);
+r_array = new Array(len_1);
+result = new Array(len_1);
+
+Orient_array = new Uint8ClampedArray(data.length/4);
+
+var x1=0;
+var y1=0;
+var index=0;
+var out=0;
+for(var i = 0; i < gray.length; i += 4) {
+index=i/4;
+x1=index%width;
+y1=Math.floor(index/width);
+
+x_m1=x1-1;
+y_m1=y1-1;
+x_p1=x1+1;
+y_p1=y1+1;
+if (x_m1<0){x_m1=0}
+if (y_m1<0){y_m1=0}
+if (x_p1>=width){x_p1=width-1}
+if (y_p1>=height){y_p1=height-1}
+
+var box=[
+gray[(y_m1*width+x_m1)*4],gray[(y_m1*width+x1)*4],gray[(y_m1*width+x_p1)*4],
+gray[(y1*width+x_m1)*4],gray[i],gray[(y1*width+x_p1)*4],
+gray[(y_p1*width+x_m1)*4],gray[(y_p1*width+x1)*4],gray[(y_p1*width+x_p1)*4],
+];
+
+var conv_x = (kernel_x[0] * box[0]) + (kernel_x[1] * box[1]) + (kernel_x[2] * box[2])
+	+ (kernel_x[3] * box[3]) + (kernel_x[4] * box[4]) + (kernel_x[5] * box[5])
+	+ (kernel_x[6] * box[6]) + (kernel_x[7] * box[7]) + (kernel_x[8] * box[8]);
+	
+var conv_y = (kernel_y[0] * box[0]) + (kernel_y[1] * box[1]) + (kernel_y[2] * box[2])
+	+ (kernel_y[3] * box[3]) + (kernel_y[4] * box[4]) + (kernel_y[5] * box[5])
+	+ (kernel_y[6] * box[6]) + (kernel_y[7] * box[7]) + (kernel_y[8] * box[8]);
+
+var v_x2=conv_x**2;
+var v_y2=conv_y**2;
+var v_xy=conv_x*conv_y;
+
+GradX_array[index] =v_x2;
+GradY_array[index] =v_y2;
+GradXY_array[index] =v_xy;
+}
+
+kernel = [1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9];
+GradX_array=apply2dfilter2(GradX_array,kernel);
+GradY_array=apply2dfilter2(GradY_array,kernel);
+GradXY_array=apply2dfilter2(GradXY_array,kernel);
+var rmax = 0;
+for(var i = 0; i < GradX_array.length; i += 4) {
+
+
+}
+
+//data[i] = data[i+1] = data[i+2] = out;
+pixels.data=data;
+return pixels;
+}
+
+function apply2dfilter2(data,kernel){
+gray=[...data];
+var x1=0;
+var y1=0;
+var index=0;
+for(var i = 0; i < gray.length; i += 1) {
+index=i;
+x1=index%width;
+y1=Math.floor(index/width);
+
+x_m1=x1-1;
+y_m1=y1-1;
+x_p1=x1+1;
+y_p1=y1+1;
+if (x_m1<0){x_m1=0}
+if (y_m1<0){y_m1=0}
+if (x_p1>=width){x_p1=width-1}
+if (y_p1>=height){y_p1=height-1}
+
+var box=[
+gray[(y_m1*width+x_m1)],gray[(y_m1*width+x1)],gray[(y_m1*width+x_p1)],
+gray[(y1*width+x_m1)],gray[i],gray[(y1*width+x_p1)],
+gray[(y_p1*width+x_m1)],gray[(y_p1*width+x1)],gray[(y_p1*width+x_p1)],
+];
+
+var conv = (kernel[0] * box[0]) + (kernel[1] * box[1]) + (kernel[2] * box[2])
+	+ (kernel[3] * box[3]) + (kernel[4] * box[4]) + (kernel[5] * box[5])
+	+ (kernel[6] * box[6]) + (kernel[7] * box[7]) + (kernel[8] * box[8]);
+
+grad1=Math.floor(conv);
+//if (grad1<30){out=0} else{out=255}
+data[i] = grad1;
+}
+return data;
+}
+
+//BRIEF_Descriptor
 </script>
 
 </body>
