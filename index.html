@@ -98,6 +98,7 @@ color: #F386FF;
 <option value="76">GLBP LocalPattern</option>
 <option value="77">HOG Descriptor</option>
 <option value="78">Harris CornerDetection</option>
+<option value="79">FAST_Descriptor</option>
 
 </select>
 
@@ -164,8 +165,7 @@ const fnnames={
 '76':'GLBP_LocalPattern',
 '77':'HOG_Descriptor',
 '78':'Harris_Descriptor',
-'79':'GLBP_LocalPattern',
-'80':'GLBP_LocalPattern',
+'79':'FAST_Descriptor',
 
 };
 
@@ -179,18 +179,18 @@ var div_1 = document.getElementById("subinputs");
 
 var element = document.getElementById("pickeffect");
 var eleval1=element.value;
-if ((Math.floor(eleval1)>76)&&(is_cv_loaded==false)) {
-loadcv2_module();
-}
+//if ((Math.floor(eleval1)==90)&&(is_cv_loaded==false)) {
+//loadcv2_module();
+//}
 currentEffect=window[fnnames[eleval1]];
 var effect_name=currentEffect.name;
 
 element.onchange=function(){
 var eleval1=element.value;
 
-if ((Math.floor(eleval1)>76)&&(is_cv_loaded==false)) {
-loadcv2_module();
-}
+//if ((Math.floor(eleval1)==90)&&(is_cv_loaded==false)) {
+//loadcv2_module();
+//}
 
 currentEffect=window[fnnames[eleval1]];
 effect_name=currentEffect.name;
@@ -1811,25 +1811,24 @@ function getBlock(matrix, x, y, length) {
 
 function Harris_Descriptor(pixels) {
 var data = pixels.data;
-width = canvas.width;
-height = canvas.height;
 
 kernel_x = [1, 0, -1, 2, 0, -2, 1, 0, -1];//sobel x
 kernel_y = [1, 2, 1, 0, 0, 0, -1, -2, -1];//sobel y
 
-gray = new Uint8ClampedArray(data.length);
-tdata1 = new Uint8ClampedArray(data.length/4);
+//gray = new Uint8ClampedArray(data.length);
+var gray = new Uint8ClampedArray(data.length/4);
+var tdata1 = new Uint8ClampedArray(data.length/4);
 for(var i = 0; i < data.length; i += 4) {
 	//var avg = Math.round((data[i] + data[i+1] + data[i+2]) / 3);
-	var avg = Math.floor(data[i] * 0.299 + data[i+1] * 0.587
-  + data[i+2] * 0.114);
-	gray[i] = gray[i+1] = gray[i+2] = avg;
-	gray[i+3] = 0;
+	var avg = Math.floor(data[i] * 0.299 + data[i+1] * 0.587+ data[i+2] * 0.114);
+	//gray[i] = gray[i+1] = gray[i+2] = avg;
+	gray[i/4]=avg;
 	tdata1[i/4]=avg;
 }
 
-
 //var choice=Math.floor(InputFieldsAll[0].value);
+kernel = [1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9];
+gray=apply2dfilter2(gray,kernel);
 
 len_1=data.length/4;
 GradX_array = new Array(len_1);
@@ -1838,14 +1837,12 @@ GradXY_array = new Array(len_1);
 r_array = new Array(len_1);
 result = new Array(len_1);
 
-Orient_array = new Uint8ClampedArray(data.length/4);
-
 var x1=0;
 var y1=0;
 var index=0;
 var out=0;
-for(var i = 0; i < gray.length; i += 4) {
-index=i/4;
+for(var i = 0; i < gray.length; i += 1) {
+index=i;
 x1=index%width;
 y1=Math.floor(index/width);
 
@@ -1859,9 +1856,9 @@ if (x_p1>=width){x_p1=width-1}
 if (y_p1>=height){y_p1=height-1}
 
 var box=[
-gray[(y_m1*width+x_m1)*4],gray[(y_m1*width+x1)*4],gray[(y_m1*width+x_p1)*4],
-gray[(y1*width+x_m1)*4],gray[i],gray[(y1*width+x_p1)*4],
-gray[(y_p1*width+x_m1)*4],gray[(y_p1*width+x1)*4],gray[(y_p1*width+x_p1)*4],
+gray[(y_m1*width+x_m1)],gray[(y_m1*width+x1)],gray[(y_m1*width+x_p1)],
+gray[(y1*width+x_m1)],gray[i],gray[(y1*width+x_p1)],
+gray[(y_p1*width+x_m1)],gray[(y_p1*width+x1)],gray[(y_p1*width+x_p1)],
 ];
 
 var conv_x = (kernel_x[0] * box[0]) + (kernel_x[1] * box[1]) + (kernel_x[2] * box[2])
@@ -1886,18 +1883,45 @@ GradX_array=apply2dfilter2(GradX_array,kernel);
 GradY_array=apply2dfilter2(GradY_array,kernel);
 GradXY_array=apply2dfilter2(GradXY_array,kernel);
 var rmax = 0;
-for(var i = 0; i < GradX_array.length; i += 4) {
-
-
+for(var i = 0; i < GradX_array.length; i += 1) {
+r_array[i]=(GradX_array[i]*GradY_array[i]-GradXY_array[i]**2)-0.04*((GradX_array[i]+GradY_array[i])**2);
+if(r_array[i]>rmax){rmax=r_array[i];}
 }
 
-//data[i] = data[i+1] = data[i+2] = out;
+
+for(var i = 0; i < data.length; i += 4) {
+data[i] = data[i+1] = data[i+2] = tdata1[i/4]/1.3;
+}
 pixels.data=data;
+ctx.putImageData(pixels, 0, 0);
+
+ctx.lineWidth = 1;
+ctx.strokeStyle = "rgb(128, 255, 128)";//"green";
+
+for(var i = 0; i < height-1; i += 1) {
+for(var j = 0; j < width-1; j += 1) {
+flatpos=(i*width+j);
+if ((r_array[flatpos]>0.01*rmax) && (r_array[flatpos] > r_array[((i-1)*width+j-1)]) && (r_array[flatpos] > r_array[((i-1)*width+j+1)]) && (r_array[flatpos] > r_array[((i+1)*width+j-1)]) && (r_array[flatpos] > r_array[((i+1)*width+j+1)])){
+result[flatpos]=1;
+ctx.beginPath();
+ctx.arc(j,i, 1, 0, 2 * Math.PI);
+ctx.stroke(); 
+}
+}
+}
+
+pixels = ctx.getImageData(0, 0, width, height);
+
 return pixels;
 }
 
 function apply2dfilter2(data,kernel){
-gray=[...data];
+//var gray=[...data];
+var gray = new Array(data.length);
+for(var i = 0; i < gray.length; i += 1) {
+gray[i]=data[i];
+}
+//var gray=data;
 var x1=0;
 var y1=0;
 var index=0;
@@ -1905,7 +1929,6 @@ for(var i = 0; i < gray.length; i += 1) {
 index=i;
 x1=index%width;
 y1=Math.floor(index/width);
-
 x_m1=x1-1;
 y_m1=y1-1;
 x_p1=x1+1;
@@ -1914,7 +1937,6 @@ if (x_m1<0){x_m1=0}
 if (y_m1<0){y_m1=0}
 if (x_p1>=width){x_p1=width-1}
 if (y_p1>=height){y_p1=height-1}
-
 var box=[
 gray[(y_m1*width+x_m1)],gray[(y_m1*width+x1)],gray[(y_m1*width+x_p1)],
 gray[(y1*width+x_m1)],gray[i],gray[(y1*width+x_p1)],
@@ -1924,15 +1946,98 @@ gray[(y_p1*width+x_m1)],gray[(y_p1*width+x1)],gray[(y_p1*width+x_p1)],
 var conv = (kernel[0] * box[0]) + (kernel[1] * box[1]) + (kernel[2] * box[2])
 	+ (kernel[3] * box[3]) + (kernel[4] * box[4]) + (kernel[5] * box[5])
 	+ (kernel[6] * box[6]) + (kernel[7] * box[7]) + (kernel[8] * box[8]);
-
 grad1=Math.floor(conv);
-//if (grad1<30){out=0} else{out=255}
 data[i] = grad1;
 }
 return data;
 }
 
-//BRIEF_Descriptor
+function FAST_Descriptor(pixels) {
+var data = pixels.data;
+var len_1=data.length/4;
+var Tval=3;
+var NChain=12;
+//var choice=Math.floor(InputFieldsAll[0].value);
+
+var pt16=[[0,-3],[1,-3],[2,-2],[3,-1],[3,0],[3,1],[2,2],[1,3],[0,3],[-1,3],[-2,2],[-3,1],[-3,0],[-3,-1],[-2,-2],[-1,-3]];
+
+var gray = new Uint8ClampedArray(len_1);
+var tdata1 = new Uint8ClampedArray(len_1);
+for(var i = 0; i < data.length; i += 4) {
+	var avg = Math.floor(data[i] * 0.299 + data[i+1] * 0.587+ data[i+2] * 0.114);
+	//gray[i] = gray[i+1] = gray[i+2] = avg;
+	gray[i/4]=avg;
+	tdata1[i/4]=avg;
+}
+
+kernel = [1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9,1.0/9];
+gray=apply2dfilter2(gray,kernel);
+gray=apply2dfilter2(gray,kernel);
+
+result = new Array(len_1);
+
+var x1=0;
+var y1=0;
+var index=0;
+var ipts4=[0,4,8,12];
+for(var i = 0; i < gray.length; i += 1) {
+index=i;
+x1=index%width;
+y1=Math.floor(index/width);
+flatpos=y1*width+x1;
+
+var Lcount=0;
+var Ucount=0;
+for(var t=0;t<ipts4.length;t++){
+Ip=gray[flatpos];
+valnow=gray[((y1+pt16[ipts4[t]][1])*width+x1+pt16[ipts4[t]][0])];
+if (typeof valnow == 'undefined'){valnow=Ip;}
+if(valnow>Ip+Tval){Ucount+=1;}
+if(valnow<Ip-Tval){Lcount+=1;}
+}
+
+if(Lcount>2 || Ucount>2){
+var Lcount2=0;
+var Ucount2=0;
+for(var t2=0;t2<pt16.length;t2++){
+valnow=gray[((y1+pt16[t2][1])*width+x1+pt16[t2][0])];
+if (typeof valnow == 'undefined'){valnow=Ip;}
+if(valnow>Ip+Tval){Ucount2+=1;} else {Ucount2=0;}
+if(valnow<Ip-Tval){Lcount2+=1;} else {Lcount2=0;}
+if(Lcount2>=NChain || Ucount2>=NChain){
+result[flatpos]=1;
+break;
+}
+}
+}
+
+}
+
+
+for(var i = 0; i < data.length; i += 4) {
+data[i] = data[i+1] = data[i+2] = tdata1[i/4]/1.3;
+}
+pixels.data=data;
+ctx.putImageData(pixels, 0, 0);
+
+ctx.lineWidth = 1;
+ctx.strokeStyle = "rgb(128, 255, 128)";//"green";
+
+for(var i = 0; i < height-1; i += 1) {
+for(var j = 0; j < width-1; j += 1) {
+flatpos=(i*width+j);
+if (result[flatpos]==1){
+ctx.beginPath();
+ctx.arc(j,i, 1, 0, 2 * Math.PI);
+ctx.stroke(); 
+}
+}
+}
+
+pixels = ctx.getImageData(0, 0, width, height);
+return pixels;
+}
+
 </script>
 
 </body>
