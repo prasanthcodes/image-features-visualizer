@@ -19,3 +19,11 @@
 18. Binary Gradient Contours (BGC)
 19. Gradient Local Binary Pattern (GLBP)
 20. Histogram of Oriented Gradients (HOG)
+21. Harris Corner Detection
+22. FAST descriptor
+
+#### References and links
+
+1. https://github.com/harthur/hog-descriptor
+2. https://stackoverflow.com/a/43837296/15934296
+3. https://medium.com/@deepanshut041/introduction-to-fast-features-from-accelerated-segment-test-4ed33dde6d65
